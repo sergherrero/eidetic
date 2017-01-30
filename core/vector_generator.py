@@ -49,23 +49,30 @@ class Tensorflow:
         return getattr(self.instance, name)
 
 
-def extract_feature_vector(input_image_path):
+class ImageFeatureVector:
     """
-    Extract feature vector using tensorflow
+    Stores information about the image and generates
+    the tensorflow vector.
     """
-    if input_image_path.startswith("https://") or \
-       input_image_path.startswith("http://"):
-        image_path = tempfile.mkstemp(suffix='jpg')[1]
-        urllib.request.urlretrieve(input_image_path, image_path)
-    else:
-        image_path = input_image_path
+    def __init__(self, input_image_path):
+        self.input_image_path = input_image_path
+        self.features = self.generate_feature_vector(self.input_image_path)
 
-    image_data = gfile.FastGFile(image_path, 'rb').read()
-    features = np.squeeze(Tensorflow().tf_session.run(
-        Tensorflow().next_to_last_tensor,
-        {'DecodeJpeg/contents:0': image_data}))
 
-    if input_image_path != image_path:
-        os.remove(image_path)
+    @staticmethod
+    def generate_feature_vector(input_image_path):
+        if input_image_path.startswith("https://") or \
+           input_image_path.startswith("http://"):
+            image_path = tempfile.mkstemp(suffix='jpg')[1]
+            urllib.request.urlretrieve(input_image_path, image_path)
+        else:
+            image_path = input_image_path
 
-    return features
+        image_data = gfile.FastGFile(image_path, 'rb').read()
+        features = np.squeeze(Tensorflow().tf_session.run(
+            Tensorflow().next_to_last_tensor,
+            {'DecodeJpeg/contents:0': image_data}))
+
+        if input_image_path != image_path:
+            os.remove(image_path)
+        return features
