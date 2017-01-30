@@ -18,13 +18,13 @@ from tensorflow.python.platform import gfile
 
 
 
-class TensorflowSession:
+class Tensorflow:
     """
     Singleton class for tensorflow sessions.
     """
     instance = None
 
-    class __TensorflowSession:
+    class __Tensorflow:
 
         def __init__(self):
             self.create_graph()
@@ -41,9 +41,9 @@ class TensorflowSession:
                 _ = tf.import_graph_def(graph_def, name='')
 
     def __init__(self):
-        if not TensorflowSession.instance:
-            TensorflowSession.instance = (
-                TensorflowSession.__TensorflowSession())
+        if not Tensorflow.instance:
+            Tensorflow.instance = (
+                Tensorflow.__Tensorflow())
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
@@ -61,8 +61,8 @@ def extract_feature_vector(input_image_path):
         image_path = input_image_path
 
     image_data = gfile.FastGFile(image_path, 'rb').read()
-    features = np.squeeze(TensorflowSession().tf_session.run(
-        TensorflowSession().next_to_last_tensor,
+    features = np.squeeze(Tensorflow().tf_session.run(
+        Tensorflow().next_to_last_tensor,
         {'DecodeJpeg/contents:0': image_data}))
 
     if input_image_path != image_path:
