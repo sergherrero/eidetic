@@ -18,13 +18,13 @@ from tensorflow.python.platform import gfile
 
 
 
-class TensorflowSession:
+class Tensorflow:
     """
     Singleton class for tensorflow sessions.
     """
     instance = None
 
-    class __TensorflowSession:
+    class __Tensorflow:
 
         def __init__(self):
             self.create_graph()
@@ -41,31 +41,38 @@ class TensorflowSession:
                 _ = tf.import_graph_def(graph_def, name='')
 
     def __init__(self):
-        if not TensorflowSession.instance:
-            TensorflowSession.instance = (
-                TensorflowSession.__TensorflowSession())
+        if not Tensorflow.instance:
+            Tensorflow.instance = (
+                Tensorflow.__Tensorflow())
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
 
 
-def extract_feature_vector(input_image_path):
+class ImageFeatureVector:
     """
-    Extract feature vector using tensorflow
+    Stores information about the image and generates
+    the tensorflow vector.
     """
-    if input_image_path.startswith("https://") or \
-       input_image_path.startswith("http://"):
-        image_path = tempfile.mkstemp(suffix='jpg')[1]
-        urllib.request.urlretrieve(input_image_path, image_path)
-    else:
-        image_path = input_image_path
+    def __init__(self, input_image_path):
+        self.input_image_path = input_image_path
+        self.features = self.generate_feature_vector(self.input_image_path)
 
-    image_data = gfile.FastGFile(image_path, 'rb').read()
-    features = np.squeeze(TensorflowSession().tf_session.run(
-        TensorflowSession().next_to_last_tensor,
-        {'DecodeJpeg/contents:0': image_data}))
 
-    if input_image_path != image_path:
-        os.remove(image_path)
+    @staticmethod
+    def generate_feature_vector(input_image_path):
+        if input_image_path.startswith("https://") or \
+           input_image_path.startswith("http://"):
+            image_path = tempfile.mkstemp(suffix='jpg')[1]
+            urllib.request.urlretrieve(input_image_path, image_path)
+        else:
+            image_path = input_image_path
 
-    return features
+        image_data = gfile.FastGFile(image_path, 'rb').read()
+        features = np.squeeze(Tensorflow().tf_session.run(
+            Tensorflow().next_to_last_tensor,
+            {'DecodeJpeg/contents:0': image_data}))
+
+        if input_image_path != image_path:
+            os.remove(image_path)
+        return features
