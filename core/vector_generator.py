@@ -8,7 +8,7 @@ from __future__ import division
 import os
 import re
 import numpy as np
-import urllib.request
+import urllib
 import tempfile
 
 import pandas as pd
@@ -64,7 +64,7 @@ class ImageFeatureVector:
         if input_image_path.startswith("https://") or \
            input_image_path.startswith("http://"):
             image_path = tempfile.mkstemp(suffix='jpg')[1]
-            urllib.request.urlretrieve(input_image_path, image_path)
+            urllib.urlretrieve(input_image_path, image_path)
         else:
             image_path = input_image_path
 
