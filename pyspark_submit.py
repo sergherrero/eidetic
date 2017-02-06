@@ -147,6 +147,9 @@ def main(argv):
     else:
         subprocess.check_output(cmd, shell=True)
 
+    # Clean shipped zip files.
+    for file_to_remove in py_files:
+        os.remove(file_to_remove)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
