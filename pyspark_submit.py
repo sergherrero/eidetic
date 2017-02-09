@@ -119,12 +119,11 @@ def main(argv):
     opts = parser.parse_args(argv)
 
     # Include auxiliary files.
+    files_flag = ""
     if os.path.exists(opts.file_dir) and len(os.listdir(opts.file_dir)) > 1:
         files = map(lambda f: os.path.join(opts.files, f),
                     os.listdir(opts.file_dir))
         files_flag = "--files {0}".format(",".join(files))
-    else:
-        files_flag = ""
 
     # Include source python files and package files.
     current_abs_path = os.path.abspath(__file__)
@@ -135,12 +134,11 @@ def main(argv):
     os.chdir(os.path.dirname(current_abs_path))
 
     # Include jar files (e.g database connectors)
+    jars_flag = ""
     if os.path.exists(opts.jar_dir) and len(os.listdir(opts.jar_dir)) > 1:
         jars = map(lambda f: os.path.join(opts.jar_dir, f),
                    os.listdir(opts.jar_dir))
         jars_flag = "--jars {0}".format(",".join(jars))
-    else:
-        jars_flag = ""
 
     # Specify driver class-path
     driver_class_path_flag = "--driver-class-path " + ":".join(
