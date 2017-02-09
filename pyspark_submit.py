@@ -105,7 +105,7 @@ def main(argv):
         description="Script to submit spark jobs.")
     parser.add_argument('--file_dir', action='store', required=False,
                         type=str, default="files",
-                        help='directory of data files to be shipped to the workers.')
+                        help='directory of files to be shipped to the workers.')
     parser.add_argument("--requirements_file", action='store', required=False,
                         type=str, default="requirements.txt",
                         help='packages to install in the worker nodes.')
@@ -115,7 +115,7 @@ def main(argv):
     parser.add_argument("--dry_run", action="store_true", default=False,
                         help='print spark-submit command.')
     parser.add_argument('args', nargs='*',
-                        help='script containing the job to execute and its arguments.')
+                        help='python job to execute and its arguments.')
     opts = parser.parse_args(argv)
 
     # Include auxiliary files.
@@ -147,6 +147,7 @@ def main(argv):
         (os.listdir(opts.jar_dir) if os.path.exists(opts.jar_dir) else []) +
         DEFAULT_DRIVER_CLASS_PATH)
 
+    # Execute spark-submit command
     cmd = ("/usr/bin/spark-submit {0} {1} {2} {3} {4}".format(
         files_flag, py_files_flag, jars_flag, driver_class_path_flag,
         ' '.join(opts.args)))
