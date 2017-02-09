@@ -120,7 +120,9 @@ def main(argv):
 
     # Include auxiliary files.
     if os.path.exists(opts.file_dir) and len(os.listdir(opts.file_dir)) > 1:
-        files_flag = "--files {0}".format(",".join(os.listdir(opts.file_dir)))
+        files = map(lambda f: os.path.join(opts.files, f),
+                    os.listdir(opts.file_dir))
+        files_flag = "--files {0}".format(",".join(files))
     else:
         files_flag = ""
 
@@ -134,7 +136,9 @@ def main(argv):
 
     # Include jar files (e.g database connectors)
     if os.path.exists(opts.jar_dir) and len(os.listdir(opts.jar_dir)) > 1:
-        jars_flag = "--jars {0}".format(",".join(os.listdir(opts.jar_dir)))
+        jars = map(lambda f: os.path.join(opts.jar_dir, f),
+                   os.listdir(opts.jar_dir))
+        jars_flag = "--jars {0}".format(",".join(jars))
     else:
         jars_flag = ""
 
