@@ -67,10 +67,12 @@ def generate_packages_zip_file(source_path, use_temp_file=True):
     subprocess.check_output(virtualenv_cmd, shell=True)
 
     # Install pip packages from requirements file.
-    pip_cmd = "{0}/venv/bin/pip install -r {1}".format(
-        temp_dir, os.path.join(source_path, "requirements.txt"))
-    logging.info("Running: {}".format(pip_cmd))
-    subprocess.check_output(pip_cmd, shell=True)
+    requirements_file_path = os.path.join(source_path, "requirements.txt")
+    if os.path.exists(requirements_file_path):
+        pip_cmd = "{0}/venv/bin/pip install -r {1}".format(
+            temp_dir, requirements_file_path)
+        logging.info("Running: {}".format(pip_cmd))
+        subprocess.check_output(pip_cmd, shell=True)
 
     # Remove unnecessary packages
     path_venv = temp_dir + "/venv/lib/python2.7/site-packages/"
