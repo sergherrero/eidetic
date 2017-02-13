@@ -32,12 +32,14 @@ def create_zip_file_from_path(source_path, use_temp_file=True):
     """
     Generates a zip file containing all .py files in folders and subfolders.
     """
-    os.chdir(source_path)
     if use_temp_file:
         zip_filename = get_temp_file_path(".zip")
     else:
-        zip_filename = os.path.dirname(source_path)
+        base_path = os.path.dirname(os.path.realpath(__file__))
+        zip_filename = os.path.join(
+            base_path, os.path.basename(os.path.abspath(source_path)) + ".zip")
     zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
+    os.chdir(source_path)
 
     for (path, dirs, files) in os.walk(source_path):
         for filename in files:
@@ -62,7 +64,7 @@ def generate_packages_zip_file(source_path, use_temp_file=True):
     # Create virtualenv
     temp_dir = tempfile.mkdtemp()
     os.chdir(source_path)
-    virtualenv_cmd = "/usr/local/bin/virtualenv {0}/venv".format(temp_dir)
+    virtualenv_cmd = "/usr/bin/virtualenv {0}/venv".format(temp_dir)
     logging.info("Running: {}".format(virtualenv_cmd))
     subprocess.check_output(virtualenv_cmd, shell=True)
 
@@ -162,8 +164,9 @@ def main(argv):
         subprocess.check_output(cmd, shell=True)
 
     # Clean shipped zip files.
-    for file_to_remove in py_files:
-        os.remove(file_to_remove)
+    if opts.use_temp_file:
+        for file_to_remove in py_files:
+            os.remove(file_to_remove)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
