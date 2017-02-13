@@ -28,12 +28,15 @@ def get_temp_file_path(suffix):
     return temp_file_name
 
 
-def create_zip_file_from_path(source_path):
+def create_zip_file_from_path(source_path, use_temp_file=True):
     """
     Generates a zip file containing all .py files in folders and subfolders.
     """
     os.chdir(source_path)
-    zip_filename = get_temp_file_path(".zip")
+    if use_temp_file:
+        zip_filename = get_temp_file_path(".zip")
+    else:
+        zip_filename = os.path.dirname(source_path)
     zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
 
     for (path, dirs, files) in os.walk(source_path):
@@ -51,7 +54,7 @@ PACKAGES_TO_REMOVE = ("easy_install", "pip", "pkg_resources",
                       "setuptools", "wheel")
 
 
-def generate_packages_zip_file(source_path, requirements_filepath):
+def generate_packages_zip_file(source_path, use_temp_file=True):
     """
     Generates a zip file containing all dependencies that will be shipped
     to the spark worker nodes.
@@ -59,13 +62,13 @@ def generate_packages_zip_file(source_path, requirements_filepath):
     # Create virtualenv
     temp_dir = tempfile.mkdtemp()
     os.chdir(source_path)
-    virtualenv_cmd = "/usr/bin/virtualenv {0}/venv".format(temp_dir)
+    virtualenv_cmd = "/usr/local/bin/virtualenv {0}/venv".format(temp_dir)
     logging.info("Running: {}".format(virtualenv_cmd))
     subprocess.check_output(virtualenv_cmd, shell=True)
 
     # Install pip packages from requirements file.
     pip_cmd = "{0}/venv/bin/pip install -r {1}".format(
-        temp_dir, requirements_filepath)
+        temp_dir, os.path.join(source_path, "requirements.txt"))
     logging.info("Running: {}".format(pip_cmd))
     subprocess.check_output(pip_cmd, shell=True)
 
@@ -77,16 +80,18 @@ def generate_packages_zip_file(source_path, requirements_filepath):
                 shutil.rmtree(path)
             else:
                 os.remove(path)
-    return create_zip_file_from_path(path_venv)
+    return create_zip_file_from_path(path_venv, use_temp_file=use_temp_file)
 
 
-def prepare_spark_zip_files(source_path, requirements_file):
+def prepare_spark_zip_files(source_path, use_temp_file):
     """
     Returns a tuple with the absolute paths to the
     zip files containing both the source py files and the packages.
     """
-    return (create_zip_file_from_path(source_path),
-            generate_packages_zip_file(source_path, requirements_file))
+    return (create_zip_file_from_path(
+        source_path, use_temp_file=use_temp_file),
+            generate_packages_zip_file(
+        source_path, use_temp_file=use_temp_file))
 
 
 DEFAULT_DRIVER_CLASS_PATH = [
@@ -106,14 +111,13 @@ def main(argv):
     parser.add_argument('--file_dir', action='store', required=False,
                         type=str, default="files",
                         help='directory of files to be shipped to the workers.')
-    parser.add_argument("--requirements_file", action='store', required=False,
-                        type=str, default="requirements.txt",
-                        help='packages to install in the worker nodes.')
     parser.add_argument('--jar_dir', action='store', required=False,
                         type=str, default="bin",
                         help='directory containing jar files.')
     parser.add_argument("--dry_run", action="store_true", default=False,
                         help='print spark-submit command.')
+    parser.add_argument("--use_temp_file", action="store_true", default=False,
+                        help='Prepare source code and packages in temp files.')
     parser.add_argument('args', nargs='*',
                         help='python job to execute and its arguments.')
     opts = parser.parse_args(argv)
@@ -129,7 +133,7 @@ def main(argv):
     current_abs_path = os.path.abspath(__file__)
     current_dir = os.path.dirname(__file__)
     py_files = prepare_spark_zip_files(
-        "." if current_dir == "" else current_dir, opts.requirements_file)
+        "." if current_dir == "" else current_dir, opts.use_temp_file)
     py_files_flag = "--py-files " + ",".join(py_files)
     os.chdir(os.path.dirname(current_abs_path))
 
