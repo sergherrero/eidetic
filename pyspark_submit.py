@@ -129,7 +129,7 @@ def main(argv):
     # Include auxiliary files.
     files_flag = ""
     if os.path.exists(opts.file_dir) and len(os.listdir(opts.file_dir)) > 1:
-        files = map(lambda f: os.path.join(opts.files, f),
+        files = map(lambda f: os.path.join(opts.file_dir, f),
                     os.listdir(opts.file_dir))
         files_flag = "--files {0}".format(",".join(files))
 
