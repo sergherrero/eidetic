@@ -12,12 +12,11 @@ import numpy as np
 import urllib
 import tempfile
 
-import pandas as pd
 import tensorflow as tf
 import tensorflow.python.platform
 from tensorflow.python.platform import gfile
 
-DATA_DIR = "./data/imagenet"
+import settings
 
 
 class Tensorflow:
@@ -28,26 +27,27 @@ class Tensorflow:
 
     class __Tensorflow:
 
-        def __init__(self):
+        def __init__(self, data_dir=None):
+            self.data_dir = '' if data_dir is None else data_dir
             self.create_graph()
             self.tf_session = tf.Session()
             self.next_to_last_tensor = self.tf_session.graph.get_tensor_by_name(
                 'pool_3:0')
             self.softmax_tensor = self.tf_session.graph.get_tensor_by_name(
                 'softmax:0')
-            self.node_to_label = NodeToLabelMap()
+            self.node_to_label = NodeToLabelMap(data_dir=data_dir)
 
         def create_graph(self):
             with gfile.FastGFile(os.path.join(
-                    DATA_DIR, 'classify_image_graph_def.pb'), 'rb') as f:
+                    self.data_dir, settings.MODEL_FILE), 'rb') as f:
                 graph_def = tf.GraphDef()
                 graph_def.ParseFromString(f.read())
                 _ = tf.import_graph_def(graph_def, name='')
 
-    def __init__(self):
+    def __init__(self, data_dir=None):
         if not Tensorflow.instance:
             Tensorflow.instance = (
-                Tensorflow.__Tensorflow())
+                Tensorflow.__Tensorflow(data_dir=data_dir))
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
@@ -62,7 +62,7 @@ def download_image(input_image_path):
         image_path = input_image_path
     return image_path
 
-    
+
 class ImageFeatureVector:
     """
     Stores information about the image and generates
@@ -73,7 +73,7 @@ class ImageFeatureVector:
         self.features = self.get_feature_vector(self.input_image_path)
         self.labels = self.get_image_labels(self.input_image_path)
 
-  
+
     @staticmethod
     def get_feature_vector(input_image_path):
         """
@@ -92,7 +92,7 @@ class ImageFeatureVector:
 
 
     @staticmethod
-    def get_image_labels(input_image_path, num_top_predictions=3):
+    def get_image_labels(input_image_path, num_top_predictions=1):
         """
         Returns a list with the scores and tags of the nodes that best
         match the input image.
@@ -118,16 +118,14 @@ class NodeToLabelMap(object):
     """
     Converts integer node ID's to a label in english.
     """
-    def __init__(self, label_lookup_path=None, uid_lookup_path=None):
-        if not label_lookup_path:
-            label_lookup_path = os.path.join(
-                DATA_DIR,'imagenet_2012_challenge_label_map_proto.pbtxt')
+    def __init__(self, data_dir=None):
+        self.data_dir = '' if data_dir is None else data_dir
+        label_lookup_path = os.path.join(
+            self.data_dir, settings.NODE_TO_UID_MAP_FILE)
 
-        if not uid_lookup_path:
-            uid_lookup_path = os.path.join(
-                DATA_DIR, 'imagenet_synset_to_human_label_map.txt')
+        uid_lookup_path = os.path.join(
+            self.data_dir, settings.UID_TO_LABEL_MAP_FILE)
         self.node_to_label = self.load(label_lookup_path, uid_lookup_path)
-
 
     def load(self, label_lookup_path, uid_lookup_path):
         """
