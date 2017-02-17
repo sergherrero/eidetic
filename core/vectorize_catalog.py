@@ -38,7 +38,7 @@ class ProductImageCatalog:
     def load_catalog(self, sql_context):
         """
         Load image catalog information into a pyspark dataframe.
-        (id, image_url, product_name, category_name)
+        (id, image_url, product_id, product_name, product_url, category_name)
         """
         self.df_catalog = (sql_context.read
             .format('jdbc')
