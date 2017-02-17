@@ -132,10 +132,10 @@ class NodeToLabelMap(object):
         Loads a label in english for each softmax node.
         """
         if not gfile.Exists(uid_lookup_path):
-            tf.logging.fatal('File does not exist %s', uid_lookup_path)
+            raise RuntimeError('File does not exist %s', uid_lookup_path)
 
         if not gfile.Exists(label_lookup_path):
-            tf.logging.fatal('File does not exist %s', label_lookup_path)
+            raise RuntimeError('File does not exist %s', label_lookup_path)
 
         uid_to_label = {}
         for line in gfile.GFile(uid_lookup_path).readlines():
@@ -153,7 +153,7 @@ class NodeToLabelMap(object):
         node_id_to_label = {}
         for (node_id, uid) in node_id_to_uid.items():
             if uid not in uid_to_label:
-                tf.logging.fatal('Failed to locate: %s', uid)
+                raise RuntimeError('Failed to locate: %s', uid)
             node_id_to_label[node_id] = uid_to_label[uid]
         return node_id_to_label
 
