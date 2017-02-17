@@ -5,13 +5,17 @@
 This module vectorizes an entire catalog of product images.
 """
 import os
+import sys
+import json
 
+import pyspark.sql
 from pyspark.sql import Row
 import pyspark.sql.functions as F
 import pyspark.sql.types as T
 
 import settings
 import core.vector_generator
+from core.vector_generator import ImageFeatureVector
 
 
 class ProductImageCatalog:
@@ -46,9 +50,29 @@ class ProductImageCatalog:
 
     def add_feature_vector_column(self, sql_context):
         """
-        Add column to the catalog representing the feature vector
+        Add column to the catalog containing the feature vector
         obtained from Tensorflow.
         """
-        # Add column with feature vector
-        # Add column with image tags
-        raise RuntimeError("Not implemented yet")
+
+        def _get_feature_vector(url):
+            features = ImageFeatureVector.get_feature_vector(url).tolist()
+            return json.dumps(features)
+
+        self.df_catalog = (self.df_catalog
+            .withColumn(
+                'features', F.udf(_get_feature_vector, T.StringType())(
+                    self.df_catalog.image_url)))
+
+    def add_image_labels_column(self, sql_context):
+        """
+        Add column to the catalog with the labels obtained by Tensorflow.
+        """
+        def _get_image_labels(url):
+            labels = ImageFeatureVector.get_image_labels(url)[0]
+            labels['score'] = str(labels['score'])
+            return json.dumps(labels)
+
+        self.df_catalog = (self.df_catalog
+            .withColumn(
+                'image_labels', F.udf(_get_image_labels, T.StringType())(
+                    self.df_catalog.image_url)))
