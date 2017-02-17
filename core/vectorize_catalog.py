@@ -47,6 +47,24 @@ class ProductImageCatalog:
                      driver="org.postgresql.Driver")
             .load())
 
+    def add_color_palette_column(self, sql_context):
+        """
+        Add column to the catalog containing the color palette using ColorThief.
+        """
+
+        def _get_color_palette(url):
+            import colorthief
+            image_path = core.vector_generator.download_image(url)
+            palette = colorthief.ColorThief(image_path).get_palette(
+                color_count=6, quality=1)
+            if url != image_path:
+                os.remove(image_path)
+            return json.dumps(palette)
+
+        self.df_catalog = (self.df_catalog
+            .withColumn(
+                'palette', F.udf(_get_color_palette, T.StringType())(
+                    self.df_catalog.image_url)))
 
     def add_feature_vector_column(self, sql_context):
         """
