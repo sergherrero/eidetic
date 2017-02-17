@@ -118,6 +118,9 @@ def main(argv):
     parser.add_argument('--jar_dir', action='store', required=False,
                         type=str, default="bin",
                         help='directory containing jar files.')
+    parser.add_argument('--env_file', action='store', required=False,
+                        type=str, default="default.env",
+                        help='environment variables to be transmitted to workers.')
     parser.add_argument("--dry_run", action="store_true", default=False,
                         help='print spark-submit command.')
     parser.add_argument("--use_temp_file", action="store_true", default=False,
@@ -153,9 +156,20 @@ def main(argv):
         (os.listdir(opts.jar_dir) if os.path.exists(opts.jar_dir) else []) +
         DEFAULT_DRIVER_CLASS_PATH)
 
+    # Include environment variables
+    env_flags = ""
+    if os.path.exists(opts.env_file):
+        env_flag_list = []
+        for env_line in open(opts.env_file, 'r').readlines():
+            env_line = env_line.rstrip()
+            if env_line:
+                env_flag_list.append(
+                    "--conf spark.yarn.appMasterEnv.{0}".format(env_line))
+        env_flags = " ".join(env_flag_list)
+
     # Execute spark-submit command
-    cmd = ("/usr/bin/spark-submit {0} {1} {2} {3} {4}".format(
-        files_flag, py_files_flag, jars_flag, driver_class_path_flag,
+    cmd = ("/usr/bin/spark-submit {0} {1} {2} {3} {4} {5}".format(
+        env_flags, files_flag, py_files_flag, jars_flag, driver_class_path_flag,
         ' '.join(opts.args)))
 
     if opts.dry_run:
