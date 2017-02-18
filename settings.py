@@ -8,6 +8,7 @@ CATALOG_CONNECTION = os.environ.get('CATALOG_CONNECTION')
 CATALOG_QUERY_PATH = os.environ.get('CATALOG_QUERY_PATH')
 
 DATA_DIR = os.environ.get('DATA_DIR')
+DB_URL = os.environ.get('DB_URL')
 MODEL_FILE = os.environ.get('MODEL_FILE', 'classify_image_graph_def.pb')
 NODE_TO_UID_MAP_FILE = os.environ.get(
     'NODE_TO_UID_MAP_FILE', 'imagenet_2012_challenge_label_map_proto.pbtxt')

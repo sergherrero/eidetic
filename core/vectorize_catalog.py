@@ -94,3 +94,15 @@ class ProductImageCatalog:
             .withColumn(
                 'image_labels', F.udf(_get_image_labels, T.StringType())(
                     self.df_catalog.image_url)))
+
+    def save_product_image_catalog(self, sql_context,
+                                   db_url=settings.DB_URL,
+                                   table_name='product_image_catalog',
+                                   mode='overwrite'):
+        (self.df_catalog
+            .write
+            .option('driver', 'org.postgresql.Driver')
+            .jdbc('jdbc:%s' % db_url,
+                  table=table_name,
+                  mode=mode))
+        return
