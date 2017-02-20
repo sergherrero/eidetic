@@ -99,10 +99,24 @@ class ProductImageCatalog:
                 'image_labels', F.udf(_get_image_labels, T.StringType())(
                     self.df_catalog.image_url)))
 
+    def load_product_image_catalog(self, sql_context,
+                                   table_name=settings.IMAGE_TABLE_NAME):
+        """
+        Load product image catalog including vectors, labels and colormap.
+        """
+        return (sql_context.read.format('jdbc')
+                .options(url="jdbc:" + settings.DB_URL,
+                         dbtable=table_name,
+                         driver="org.postgresql.Driver")
+                .load())
+
     def save_product_image_catalog(self, sql_context,
                                    db_url=settings.DB_URL,
-                                   table_name='product_image_catalog',
-                                   mode='overwrite'):
+                                   table_name=settings.IMAGE_TABLE_NAME,
+                                   mode='append'):
+        """
+        Save product image catalog including vectors, labels and colormap.
+        """
         (self.df_catalog
             .write
             .option('driver', 'org.postgresql.Driver')
