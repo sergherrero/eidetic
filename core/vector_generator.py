@@ -27,27 +27,44 @@ class Tensorflow:
 
     class __Tensorflow:
 
-        def __init__(self, data_dir=None):
+        def __init__(self, data_dir=None, model_broadcast=None,
+                     node_to_uid_map_broadcast=None,
+                     uid_to_label_map_broadcast=None):
             self.data_dir = '' if data_dir is None else data_dir
+            self.model_broadcast = model_broadcast
+            self.node_to_uid_map_broadcast = node_to_uid_map_broadcast
+            self.uid_to_label_map_broadcast = uid_to_label_map_broadcast
+
             self.create_graph()
             self.tf_session = tf.Session()
             self.next_to_last_tensor = self.tf_session.graph.get_tensor_by_name(
                 'pool_3:0')
             self.softmax_tensor = self.tf_session.graph.get_tensor_by_name(
                 'softmax:0')
-            self.node_to_label = NodeToLabelMap(data_dir=data_dir)
+            self.node_to_label = NodeToLabelMap(
+                data_dir=self.data_dir,
+                node_to_uid_map_broadcast=self.node_to_uid_map_broadcast,
+                uid_to_label_map_broadcast=self.uid_to_label_map_broadcast)
 
         def create_graph(self):
-            with gfile.FastGFile(os.path.join(
-                    self.data_dir, settings.MODEL_FILE), 'rb') as f:
-                graph_def = tf.GraphDef()
-                graph_def.ParseFromString(f.read())
-                _ = tf.import_graph_def(graph_def, name='')
+            if model_broadcast is None:
+                with gfile.FastGFile(os.path.join(
+                        self.data_dir, settings.MODEL_FILE), 'rb') as f:
+                    model_data = f.read()
+                    graph_def = tf.GraphDef()
+            else:
+                model_data = model_broadcast.value
+            graph_def.ParseFromString(model_data)
+            _ = tf.import_graph_def(graph_def, name='')
 
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, model_broadcast=None):
         if not Tensorflow.instance:
             Tensorflow.instance = (
-                Tensorflow.__Tensorflow(data_dir=data_dir))
+                Tensorflow.__Tensorflow(
+                    data_dir=data_dir,
+                    model_broadcast=model_broadcast,
+                    node_to_uid_map_broadcast=node_to_uid_map_broadcast,
+                    uid_to_label_map_broadcast=uid_to_label_map_broadcast))
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
@@ -76,15 +93,16 @@ class ImageFeatureVector:
 
 
     @staticmethod
-    def get_feature_vector(input_image_path):
+    def get_feature_vector(input_image_path, model_broadcast=None):
         """
         Returns a vector containing the features calculated by
         removing the last layer of the network.
         """
         image_path = download_image(input_image_path)
         image_data = gfile.FastGFile(image_path, 'rb').read()
-        features = np.squeeze(Tensorflow().tf_session.run(
-            Tensorflow().next_to_last_tensor,
+        tensorflow = Tensorflow(model_broadcast=model_broadcast)
+        features = np.squeeze(tensorflow.tf_session.run(
+            tensorflow.next_to_last_tensor,
             {'DecodeJpeg/contents:0': image_data}))
 
         if input_image_path != image_path:
@@ -100,8 +118,9 @@ class ImageFeatureVector:
         """
         image_path = download_image(input_image_path)
         image_data = gfile.FastGFile(image_path, 'rb').read()
-        features = np.squeeze(Tensorflow().tf_session.run(
-            Tensorflow().softmax_tensor,
+        tensorflow = Tensorflow()
+        features = np.squeeze(tensorflow.tf_session.run(
+            tensorflow.softmax_tensor,
             {'DecodeJpeg/contents:0': image_data}))
 
         if input_image_path != image_path:
@@ -111,7 +130,7 @@ class ImageFeatureVector:
         for node_id in features.argsort()[-num_top_predictions:][::-1]:
             labels.append(
                 {'score': features[node_id],
-                 'tag': Tensorflow().node_to_label.id_to_string(node_id)})
+                 'tag': tensorflow.node_to_label.id_to_string(node_id)})
         return labels
 
 
@@ -119,32 +138,44 @@ class NodeToLabelMap(object):
     """
     Converts integer node ID's to a label in english.
     """
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None,
+                 node_to_uid_map_broadcast=None,
+                 uid_to_label_map_broadcast=None):
         self.data_dir = '' if data_dir is None else data_dir
-        label_lookup_path = os.path.join(
-            self.data_dir, settings.NODE_TO_UID_MAP_FILE)
+        self.node_to_uid_map_broadcast = node_to_uid_map_broadcast
+        self.uid_to_label_map_broadcast = uid_to_label_map_broadcast
 
-        uid_lookup_path = os.path.join(
-            self.data_dir, settings.UID_TO_LABEL_MAP_FILE)
-        self.node_to_label = self.load(label_lookup_path, uid_lookup_path)
+        if node_to_uid_map_broadcast is None:
+            uid_lookup_path = os.path.join(
+                self.data_dir, settings.UID_TO_LABEL_MAP_FILE)
+            if not gfile.Exists(uid_lookup_path):
+                raise RuntimeError('File does not exist %s', uid_lookup_path)
+            self.node_to_uid_map = gfile.GFile(uid_lookup_path).readlines()
+        else:
+            self.node_to_uid_map = self.node_to_uid_map_broadcast.value
 
-    def load(self, label_lookup_path, uid_lookup_path):
+        if uid_to_label_map_broadcast is None:
+            label_lookup_path = os.path.join(
+                self.data_dir, settings.NODE_TO_UID_MAP_FILE)
+            if not gfile.Exists(label_lookup_path):
+                raise RuntimeError('File does not exist %s', label_lookup_path)
+            self.uid_to_label_map = gfile.GFile(label_lookup_path).readlines()
+        else:
+            self.uid_to_label_map = self.uid_to_label_map_broadcast.value
+
+        self.node_to_label = self.load()
+
+    def load(self):
         """
         Loads a label in english for each softmax node.
         """
-        if not gfile.Exists(uid_lookup_path):
-            raise RuntimeError('File does not exist %s', uid_lookup_path)
-
-        if not gfile.Exists(label_lookup_path):
-            raise RuntimeError('File does not exist %s', label_lookup_path)
-
         uid_to_label = {}
-        for line in gfile.GFile(uid_lookup_path).readlines():
+        for line in self.node_to_uid_map:
             parsed_items = re.compile(r'[n\d]*[ \S,]*').findall(line)
             uid_to_label[parsed_items[0]] = parsed_items[2]
 
         node_id_to_uid = {}
-        for line in gfile.GFile(label_lookup_path).readlines():
+        for line in self.uid_to_label_map:
             if line.startswith('  target_class:'):
                 target_class = int(line.split(': ')[1])
             if line.startswith('  target_class_string:'):

@@ -76,9 +76,13 @@ class ProductImageCatalog:
         Add column to the catalog containing the feature vector
         obtained from Tensorflow.
         """
+        model_path = os.path.join(settings.DATA_DIR, settings.MODEL_FILE)
+        with gfile.FastGFile(model_path, 'rb') as f:
+            model_broadcast = sql_context._sc.broadcast(f.read())
 
         def _get_feature_vector(url):
-            features = ImageFeatureVector.get_feature_vector(url).tolist()
+            features = ImageFeatureVector.get_feature_vector(
+                url, model_broadcast=model_broadcast).tolist()
             return json.dumps(features)
 
         self.df_catalog = (self.df_catalog
