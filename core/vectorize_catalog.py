@@ -55,8 +55,12 @@ class ProductImageCatalog:
         def _get_color_palette(url):
             import colorthief
             image_path = core.vector_generator.download_image(url)
-            palette = colorthief.ColorThief(image_path).get_palette(
-                color_count=6, quality=1)
+            try:
+                palette = colorthief.ColorThief(image_path).get_palette(
+                    color_count=6, quality=1)
+            except Exception as e:
+                # TODO: Probably caused by empty color. Handle case.
+                palette = []
             if url != image_path:
                 os.remove(image_path)
             return json.dumps(palette)
