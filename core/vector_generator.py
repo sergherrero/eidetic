@@ -114,14 +114,19 @@ class ImageFeatureVector:
 
 
     @staticmethod
-    def get_image_labels(input_image_path, num_top_predictions=1):
+    def get_image_labels(input_image_path, num_top_predictions=1,
+                         model_broadcast=None,
+                         node_to_uid_map_broadcast=None,
+                         uid_to_label_map_broadcast=None):
         """
         Returns a list with the scores and tags of the nodes that best
         match the input image.
         """
         image_path = download_image(input_image_path)
         image_data = gfile.FastGFile(image_path, 'rb').read()
-        tensorflow = Tensorflow()
+        tensorflow = Tensorflow(model_broadcast=model_broadcast,
+                                node_to_uid_map_broadcast=node_to_uid_map_broadcast,
+                                uid_to_label_map_broadcast=uid_to_label_map_broadcast)
         features = np.squeeze(tensorflow.tf_session.run(
             tensorflow.softmax_tensor,
             {'DecodeJpeg/contents:0': image_data}))
