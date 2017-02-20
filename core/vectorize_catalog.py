@@ -7,6 +7,7 @@ This module vectorizes an entire catalog of product images.
 import os
 import sys
 import json
+import logging
 
 import pyspark.sql
 from pyspark.sql import Row
