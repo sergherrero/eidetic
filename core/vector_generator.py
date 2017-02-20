@@ -54,6 +54,7 @@ class Tensorflow:
                     graph_def = tf.GraphDef()
             else:
                 model_data = self.model_broadcast.value
+            graph_def = tf.GraphDef()
             graph_def.ParseFromString(model_data)
             _ = tf.import_graph_def(graph_def, name='')
 
