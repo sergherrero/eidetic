@@ -57,7 +57,9 @@ class Tensorflow:
             graph_def.ParseFromString(model_data)
             _ = tf.import_graph_def(graph_def, name='')
 
-    def __init__(self, data_dir=None, model_broadcast=None):
+    def __init__(self, data_dir=None, model_broadcast=None,
+                 node_to_uid_map_broadcast=None,
+                 uid_to_label_map_broadcast=None):
         if not Tensorflow.instance:
             Tensorflow.instance = (
                 Tensorflow.__Tensorflow(
