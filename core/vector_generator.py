@@ -47,13 +47,13 @@ class Tensorflow:
                 uid_to_label_map_broadcast=self.uid_to_label_map_broadcast)
 
         def create_graph(self):
-            if model_broadcast is None:
+            if self.model_broadcast is None:
                 with gfile.FastGFile(os.path.join(
                         self.data_dir, settings.MODEL_FILE), 'rb') as f:
                     model_data = f.read()
                     graph_def = tf.GraphDef()
             else:
-                model_data = model_broadcast.value
+                model_data = self.model_broadcast.value
             graph_def.ParseFromString(model_data)
             _ = tf.import_graph_def(graph_def, name='')
 
