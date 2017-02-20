@@ -17,7 +17,7 @@ import pyspark.sql.types as T
 import settings
 import core.vector_generator
 from core.vector_generator import ImageFeatureVector
-
+from tensorflow.python.platform import gfile
 
 class ProductImageCatalog:
     """
