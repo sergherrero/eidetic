@@ -175,7 +175,17 @@ def main(argv):
     if opts.dry_run:
         sys.stdout.write(cmd)
     else:
-        subprocess.check_output(cmd, shell=True)
+        # Pipe stdout
+        p = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE)
+
+        while True:
+            out = p.stdout.read(1)
+            if out == '' and p.poll() != None:
+                break
+            if out != '':
+                sys.stdout.write(out)
+                sys.stdout.flush()
 
     # Clean shipped zip files.
     if opts.use_temp_file:
