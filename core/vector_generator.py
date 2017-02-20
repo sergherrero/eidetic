@@ -57,6 +57,7 @@ def download_image(input_image_path):
     if input_image_path.startswith("https://") or \
        input_image_path.startswith("http://"):
         image_path = tempfile.mkstemp(suffix='jpg')[1]
+        urllib.URLopener.version = settings.USER_AGENT
         urllib.urlretrieve(input_image_path, image_path)
     else:
         image_path = input_image_path

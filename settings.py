@@ -14,3 +14,5 @@ NODE_TO_UID_MAP_FILE = os.environ.get(
     'NODE_TO_UID_MAP_FILE', 'imagenet_2012_challenge_label_map_proto.pbtxt')
 UID_TO_LABEL_MAP_FILE = os.environ.get(
     'UID_TO_LABEL_MAP_FILE', 'imagenet_synset_to_human_label_map.txt')
+
+USER_AGENT = os.environ.get("USER_AGENT")
