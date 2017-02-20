@@ -7,6 +7,7 @@ This module vectorizes an entire catalog of product images.
 import os
 import sys
 import json
+import logging
 
 import pyspark.sql
 from pyspark.sql import Row
@@ -95,14 +96,72 @@ class ProductImageCatalog:
                 'image_labels', F.udf(_get_image_labels, T.StringType())(
                     self.df_catalog.image_url)))
 
+    def load_product_image_catalog(self, sql_context,
+                                   table_name=settings.IMAGE_TABLE_NAME):
+        """
+        Load product image catalog including vectors, labels and colormap.
+        """
+        return sql_context.sql("SELECT * FROM %s" % table_name)
+
     def save_product_image_catalog(self, sql_context,
-                                   db_url=settings.DB_URL,
-                                   table_name='product_image_catalog',
-                                   mode='overwrite'):
-        (self.df_catalog
-            .write
-            .option('driver', 'org.postgresql.Driver')
-            .jdbc('jdbc:%s' % db_url,
-                  table=table_name,
-                  mode=mode))
+                                   table_name=settings.IMAGE_TABLE_NAME):
+        """
+        Save product image catalog including vectors, labels and colormap.
+        """
+        temp_table_name = '%s_temp' % table_name
+        all_columns = sql_context.sql(
+            'SELECT * FROM {0}'.format(table_name)).columns
+
+        df = self.df_catalog.select(all_columns)
+        df.registerTempTable(temp_table_name)
+        #escaped_all_columns = map(lambda s: '`%s`' % s, all_columns)
+        sql_context.sql(
+            'INSERT INTO TABLE {0} '
+            'SELECT {1} FROM {2}'.format(
+                table_name,
+                ', '.join(all_columns),
+                temp_table_name))
+        sql_context.catalog.dropTempView(temp_table_name)
         return
+
+def main(argv):
+
+    sql_context = pyspark.sql.SparkSession \
+                             .builder \
+                             .enableHiveSupport() \
+                             .getOrCreate()
+
+    catalog = ProductImageCatalog()
+    catalog.load_catalog(sql_context)
+
+    all_categories = (catalog.df_catalog
+        .select("category_name")
+        .distinct()
+        .collect())
+    all_categories = [r.category_name for r in all_categories]
+
+    product_image_catalog = catalog.load_product_image_catalog(sql_context)
+    existing_categories = (product_image_catalog
+        .select("category_name")
+        .distinct()
+        .collect())
+    existing_categories = [r.category_name for r in existing_categories]
+
+    missing_categories = set(all_categories) - set(existing_categories)
+
+    for category_name in missing_categories:
+        logging.warn("Adding %s", category_name)
+        catalog.load_catalog(sql_context)
+        catalog.df_catalog = (catalog.df_catalog
+            .filter(catalog.df_catalog.category_name == category_name))
+        catalog.add_feature_vector_column(sql_context)
+        catalog.add_image_labels_column(sql_context)
+        catalog.add_color_palette_column(sql_context)
+
+        catalog.save_product_image_catalog(sql_context)
+
+    sql_context.stop()
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
