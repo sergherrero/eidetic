@@ -35,7 +35,6 @@ class ProductImageCatalog:
             self.catalog_connection = 'jdbc:' + self.catalog_connection
         self.catalog_query = open(catalog_query_path).read().rstrip()
 
-
     def load_catalog(self, sql_context):
         """
         Load image catalog information into a pyspark dataframe.
@@ -48,7 +47,7 @@ class ProductImageCatalog:
                      driver="org.postgresql.Driver")
             .load())
 
-    def add_color_palette_column(self, sql_context):
+    def add_color_palette_column(self):
         """
         Add column to the catalog containing the color palette using ColorThief.
         """
@@ -71,15 +70,11 @@ class ProductImageCatalog:
                 'palette', F.udf(_get_color_palette, T.StringType())(
                     self.df_catalog.image_url)))
 
-    def add_feature_vector_column(self, sql_context):
+    def add_feature_vector_column(self, model_broadcast):
         """
         Add column to the catalog containing the feature vector
         obtained from Tensorflow.
         """
-        model_path = os.path.join(settings.DATA_DIR, settings.MODEL_FILE)
-        with gfile.FastGFile(model_path, 'rb') as f:
-            model_broadcast = sql_context._sc.broadcast(f.read())
-
         def _get_feature_vector(url):
             features = ImageFeatureVector.get_feature_vector(
                 url, model_broadcast=model_broadcast).tolist()
@@ -90,7 +85,7 @@ class ProductImageCatalog:
                 'features', F.udf(_get_feature_vector, T.StringType())(
                     self.df_catalog.image_url)))
 
-    def add_image_labels_column(self, sql_context):
+    def add_image_labels_column(self):
         """
         Add column to the catalog with the labels obtained by Tensorflow.
         """
@@ -115,8 +110,7 @@ class ProductImageCatalog:
                          driver="org.postgresql.Driver")
                 .load())
 
-    def save_product_image_catalog(self, sql_context,
-                                   db_url=settings.DB_URL,
+    def save_product_image_catalog(self, db_url=settings.DB_URL,
                                    table_name=settings.IMAGE_TABLE_NAME,
                                    mode='append'):
         """
