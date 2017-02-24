@@ -18,3 +18,6 @@ UID_TO_LABEL_MAP_FILE = os.environ.get(
     'UID_TO_LABEL_MAP_FILE', 'imagenet_synset_to_human_label_map.txt')
 
 USER_AGENT = os.environ.get("USER_AGENT")
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
+PROJECTION_COUNT = os.environ.get("PROJECTION_COUNT", 10)
