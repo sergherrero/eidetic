@@ -36,7 +36,7 @@ class ApproxNearestNeighbourEngine:
     def __init__(self, redis_host=settings.REDIS_HOST,
                  redis_port=settings.REDIS.PORT,
                  projection_count=settings.PROJECTION_COUNT,
-                 db_params=settings.IMAGE_DB_PARAMS,
+                 db_url=settings.DB_URL,
                  table_name=settings.IMAGE_TABLE_NAME):
         self.redis_host = redis_host
         self.redis_port = redis_port
@@ -81,7 +81,13 @@ class ApproxNearestNeighbourEngine:
         """
         self.engine.clean_all_buckets()
 
-        conn = psycopg2.connect(self.db_params)
+        parsed_url = urlparse.urlparse(self.db_url)
+        query_params = urlparse.parse_qs(parsed_url.query)
+        db_params = "host='{0}' dbname='{1}' user='{2}' password='{3}'".format(
+            parsed_url.netloc, parsed_url.path.lstrip("/"),
+            query_params['user'][0], query_params['password'][0])
+
+        conn = psycopg2.connect(db_params)
         cursor = conn.cursor(
             'cursor_product_image', cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute('SELECT * FROM {0}'.format(self.table_name))
